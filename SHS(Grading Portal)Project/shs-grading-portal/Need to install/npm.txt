@@ -1,0 +1,5 @@
+npx create-next-app@latest
+npm install mysql2
+npm install react-icons
+npm install bcryptjs
+npm install sweetalert2
