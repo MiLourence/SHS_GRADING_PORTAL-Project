@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
     try {
         const [students] = await db.execute(
-            "SELECT id, fullname, username, email, grade, strand, section, sex FROM users WHERE usertype = 'user'"
+            "SELECT id, fullname, username, email, grade, strand, section, sex, date_of_birth, address FROM users WHERE usertype = 'user'"
         );
         res.status(200).json(students);
     } catch (error) {

@@ -14,7 +14,9 @@ function AddStudentModal({ onClose, onStudentAdded }) {
         strand: "ABM",
         section: "Rizal",
         sex: "Male",
-    });
+        date_of_birth: "",  // Added field
+        address: ""         // Added field
+    });    
 
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -29,8 +31,7 @@ function AddStudentModal({ onClose, onStudentAdded }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Validate all fields (ensure they are not empty)
+    
         if (
             !student.firstName.trim() ||
             !student.lastName.trim() ||
@@ -40,33 +41,34 @@ function AddStudentModal({ onClose, onStudentAdded }) {
             !student.strand.trim() ||
             !student.grade.trim() ||
             !student.section.trim() ||
-            !student.sex.trim()
+            !student.sex.trim() ||
+            !student.date_of_birth.trim() ||
+            !student.address.trim()
         ) {
             setError("All fields are required.");
             return;
         }
-
+    
         const fullName = `${student.firstName} ${student.middleName} ${student.lastName}`.trim();
-
+    
         try {
-            // Hash the password before sending to the backend
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(student.password, salt);
-
+    
             const response = await fetch("/api/add_student", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
                     ...student, 
                     fullname: fullName,
-                    password: hashedPassword, // Send hashed password
+                    password: hashedPassword,
                 }),
             });
-
+    
             if (!response.ok) {
                 throw new Error("Failed to add student.");
             }
-
+    
             const newStudent = await response.json();
             onStudentAdded(newStudent);
             onClose();
@@ -163,6 +165,42 @@ function AddStudentModal({ onClose, onStudentAdded }) {
                             <option value="Female">Female</option>
                         </select>
                     </div>
+
+                    {/* Sex Selection */}
+<div>
+    <label className="block text-xs font-medium text-gray-700">Sex</label>
+    <select name="sex" value={student.sex} onChange={handleChange} className="w-full p-1.5 text-sm border rounded">
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+    </select>
+</div>
+
+{/* Date of Birth */}
+<div>
+    <label className="block text-xs font-medium text-gray-700">Date of Birth</label>
+    <input
+        type="date"
+        name="date_of_birth"
+        value={student.date_of_birth}
+        onChange={handleChange}
+        className="w-full p-1.5 text-sm border rounded"
+        required
+    />
+</div>
+
+{/* Address */}
+<div>
+    <label className="block text-xs font-medium text-gray-700">Address</label>
+    <input
+        type="text"
+        name="address"
+        value={student.address}
+        onChange={handleChange}
+        placeholder="Address"
+        className="w-full p-1.5 text-sm border rounded"
+        required
+    />
+</div>
 
                     {/* Buttons */}
                     <div className="flex justify-end space-x-2">

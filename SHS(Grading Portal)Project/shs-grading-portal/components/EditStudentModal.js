@@ -10,6 +10,8 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
     strand: student.strand,
     section: student.section,
     sex: student.sex,
+    date_of_birth: student.date_of_birth, // Added date_of_birth
+    address: student.address, // Added address
   });
 
   const handleChange = (e) => {
@@ -22,10 +24,10 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(editedStudent),
     });
-  
+
     if (response.ok) {
-      await fetchStudents(); // Ensure fresh data is fetched
-      onClose(); // Close the modal after updating
+      await fetchStudents();
+      onClose();
     } else {
       console.error("Failed to update student");
     }
@@ -40,9 +42,9 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
         <input name="username" value={editedStudent.username} onChange={handleChange} placeholder="Username" className="border p-2 w-full mb-2" />
         <input name="password" type="password" onChange={handleChange} placeholder="New Password (optional)" className="border p-2 w-full mb-2" />
         <input name="email" value={editedStudent.email} onChange={handleChange} placeholder="Email" className="border p-2 w-full mb-2" />
-        
-         {/* Grade Dropdown */}
-         <select name="grade" value={editedStudent.grade} onChange={handleChange} className="border p-2 w-full mb-2">
+
+        {/* Grade Dropdown */}
+        <select name="grade" value={editedStudent.grade} onChange={handleChange} className="border p-2 w-full mb-2">
           <option value={student.grade} hidden>{student.grade}</option>
           <option value="11">11</option>
           <option value="12">12</option>
@@ -69,6 +71,12 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
+
+        {/* Date of Birth */}
+        <input name="date_of_birth" type="date" value={editedStudent.date_of_birth} onChange={handleChange} className="border p-2 w-full mb-2" />
+
+        {/* Address */}
+        <input name="address" value={editedStudent.address} onChange={handleChange} placeholder="Address" className="border p-2 w-full mb-2" />
 
         {/* Buttons */}
         <button onClick={handleSubmit} className="bg-blue-600 text-white px-4 py-2 rounded-lg w-full mt-2">

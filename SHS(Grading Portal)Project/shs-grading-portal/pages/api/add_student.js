@@ -6,19 +6,19 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { fullname, email, username, password, sex, grade, strand, section } = req.body;
+        const { fullname, email, username, password, sex, grade, strand, section, date_of_birth, address } = req.body;
 
         // Ensure all required fields are provided
-        if (!fullname || !email || !username || !password || !sex || !grade || !strand || !section) {
+        if (!fullname || !email || !username || !password || !sex || !grade || !strand || !section || !date_of_birth || !address) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
         const query = `
-            INSERT INTO users (fullname, email, username, password, sex, grade, strand, section, usertype, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'user', 'active')
+            INSERT INTO users (fullname, email, username, password, sex, grade, strand, section, date_of_birth, address, usertype, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', 'active')
         `;
 
-        await db.execute(query, [fullname, email, username, password, sex, grade, strand, section]);
+        await db.execute(query, [fullname, email, username, password, sex, grade, strand, section, date_of_birth, address]);
 
         return res.status(200).json({ message: 'Student added successfully' });
     } catch (error) {
