@@ -7,9 +7,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { fullname, username, password, email, grade, strand, section, sex, date_of_birth, address } = req.body;
+    const { fullname, username, password, email, grade, strand, section, sex, phone_number, date_of_birth, address } = req.body;
 
-    // Check if student exists
     const [rows] = await pool.query("SELECT password FROM users WHERE username = ?", [username]);
 
     if (rows.length === 0) {
@@ -18,15 +17,15 @@ export default async function handler(req, res) {
 
     let hashedPassword = rows[0].password;
 
-    // If the password is provided, hash the new one
     if (password) {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    // Update student details
     const [updateResult] = await pool.query(
-      "UPDATE users SET fullname = ?, password = ?, email = ?, grade = ?, strand = ?, section = ?, sex = ?, date_of_birth = ?, address = ? WHERE username = ?",
-      [fullname, hashedPassword, email, grade, strand, section, sex, date_of_birth, address, username]
+      `UPDATE users 
+       SET fullname = ?, password = ?, email = ?, grade = ?, strand = ?, section = ?, sex = ?, phone_number = ?, date_of_birth = ?, address = ? 
+       WHERE username = ?`,
+      [fullname, hashedPassword, email, grade, strand, section, sex, phone_number, date_of_birth, address, username]
     );
 
     if (updateResult.affectedRows === 0) {

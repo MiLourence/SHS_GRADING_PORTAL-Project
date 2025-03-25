@@ -225,6 +225,27 @@ function Students({ students, loading, error, fetchStudents }) {
     setEditModalOpen(false);
   };
 
+  const handleDeleteStudent = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this student?");
+    if (!confirmDelete) return;
+
+    try {
+        const response = await fetch(`/api/students?id=${id}`, {
+            method: "DELETE",
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to delete student");
+        }
+
+        await fetchStudents(); // Refresh the list
+        alert("Student deleted successfully!");
+    } catch (error) {
+        console.error(error);
+        alert("Error deleting student.");
+    }
+};
+
   return (
     <div className="mt-6 bg-white p-6 rounded-lg shadow-md text-black">
       <div className="flex justify-between items-center mb-4">
@@ -264,12 +285,19 @@ function Students({ students, loading, error, fetchStudents }) {
             <h2 className="text-lg font-semibold mb-4">Student Details</h2>
             <div className="text-sm space-y-2">
               <p><strong>Full Name:</strong> {selectedStudent.fullname}</p>
-              <p><strong>Username:</strong> {selectedStudent.username}</p> {/* ADDED */}
+              <p><strong>Username:</strong> {selectedStudent.username}</p>
               <p><strong>Email:</strong> {selectedStudent.email}</p>
+              <p><strong>Phone Number:</strong> {selectedStudent.phone_number}</p>
               <p><strong>Grade:</strong> {selectedStudent.grade}</p>
               <p><strong>Sex:</strong> {selectedStudent.sex}</p>
               <p><strong>Strand:</strong> {selectedStudent.strand}</p>
               <p><strong>Section:</strong> {selectedStudent.section}</p>
+              <p><strong>Date of Birth:</strong> {new Date(selectedStudent.date_of_birth).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+              })}</p> {/* FORMATTED DATE */}
+              <p><strong>Address:</strong> {selectedStudent.address}</p>
             </div>
             <div className="mt-4 flex justify-end">
               <button onClick={closeViewModal} className="px-4 py-2 bg-gray-500 text-white rounded-lg">
@@ -288,6 +316,7 @@ function Students({ students, loading, error, fetchStudents }) {
           fetchStudents={fetchStudents}
         />
       )}
+
       {/* Show loading or error message */}
       {loading ? (
         <p className="text-center text-gray-600">Loading students...</p>
@@ -299,7 +328,7 @@ function Students({ students, loading, error, fetchStudents }) {
             <tr className="bg-blue-600 text-white">
               <th className="p-3">#</th>
               <th className="p-3">Full Name</th>
-              <th className="p-3">Username</th> {/* ADDED */}
+              <th className="p-3">Username</th>
               <th className="p-3">Email</th>
               <th className="p-3">Grade</th>
               <th className="p-3">Strand</th>
@@ -313,7 +342,7 @@ function Students({ students, loading, error, fetchStudents }) {
                 <tr key={student.id} className="border text-center">
                   <td className="p-3">{index + 1}</td>
                   <td className="p-3">{student.fullname}</td>
-                  <td className="p-3">{student.username}</td> {/* ADDED */}
+                  <td className="p-3">{student.username}</td>
                   <td className="p-3">{student.email}</td>
                   <td className="p-3">{student.grade}</td>
                   <td className="p-3">{student.strand}</td>
@@ -325,7 +354,7 @@ function Students({ students, loading, error, fetchStudents }) {
                     <button className="text-green-600 hover:text-green-800" onClick={() => openEditModal(student)}>
                       <FiEdit size={18} />
                     </button>
-                    <button className="text-red-600 hover:text-red-800">
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteStudent(student.id)}>
                       <FiTrash size={18} />
                     </button>
                   </td>
@@ -342,6 +371,7 @@ function Students({ students, loading, error, fetchStudents }) {
     </div>
   );
 }
+
 
 /* Adviser Component */
 function AdviserManagement({ advisers, loading, error, fetchAdvisers }) {

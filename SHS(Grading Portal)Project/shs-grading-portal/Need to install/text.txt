@@ -1,3 +1,4 @@
+add_student.js
 import db from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
@@ -14,10 +15,10 @@ export default async function handler(req, res) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        // Check if email already exists
-        const [existingEmail] = await db.execute("SELECT email FROM users WHERE email = ?", [email]);
-        if (existingEmail.length > 0) {
-            return res.status(400).json({ message: 'Email already exists' });
+        // Check if username or email already exists
+        const [existingUser] = await db.execute("SELECT username FROM users WHERE username = ? OR email = ?", [username, email]);
+        if (existingUser.length > 0) {
+            return res.status(400).json({ message: 'Username or Email already exists' });
         }
 
         // Hash the password before saving
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
         console.error('Database Error:', error);
 
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Duplicate entry: Email already exists' });
+            return res.status(400).json({ message: 'Duplicate entry: Email or Username already exists' });
         }
 
         return res.status(500).json({ message: 'Internal Server Error' });
