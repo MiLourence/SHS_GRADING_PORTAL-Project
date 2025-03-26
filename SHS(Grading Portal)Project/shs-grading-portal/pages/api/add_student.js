@@ -14,10 +14,15 @@ export default async function handler(req, res) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        // Check if email already exists
-        const [existingEmail] = await db.execute("SELECT email FROM users WHERE email = ?", [email]);
-        if (existingEmail.length > 0) {
-            return res.status(400).json({ message: 'Email already exists' });
+        // Check if email or username already exists
+        const [existingUser] = await db.execute("SELECT email, username FROM users WHERE email = ? OR username = ?", [email, username]);
+        
+        if (existingUser.length > 0) {
+            const conflictFields = [];
+            if (existingUser.some(user => user.email === email)) conflictFields.push("Email");
+            if (existingUser.some(user => user.username === username)) conflictFields.push("Username");
+            
+            return res.status(400).json({ message: `${conflictFields.join(" and ")} already taken.` });
         }
 
         // Hash the password before saving
@@ -34,11 +39,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Student added successfully' });
     } catch (error) {
         console.error('Database Error:', error);
-
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Duplicate entry: Email already exists' });
-        }
-
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 }

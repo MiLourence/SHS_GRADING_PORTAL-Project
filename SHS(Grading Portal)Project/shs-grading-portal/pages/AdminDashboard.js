@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import AddStudentModal from "@/components/AddStudentModal";
 import AddAdviserModal from "@/components/AddAdviserModal";
 import EditStudentModal from "@/components/EditStudentModal";
-import { FiUser, FiBook, FiBell, FiSearch, FiPlus, FiLogOut, FiMenu, FiGrid, FiUserPlus, FiHelpCircle, FiUserCheck, FiTrash, FiEye, FiEdit } from "react-icons/fi";
+import { FiColumns, FiLayers, FiUser, FiBook, FiBell, FiSearch, FiPlus, FiLogOut, FiMenu, FiGrid, FiUserPlus, FiHelpCircle, FiUserCheck, FiTrash, FiEye, FiEdit } from "react-icons/fi";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("Student Management");
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
         router.push("/login_form");
       }
     });
-  };  
+  };
 
   return (
     <div className="flex min-h-screen font-poppins bg-gray-100">
@@ -107,6 +107,7 @@ export default function AdminDashboard() {
           <SidebarItem icon={FiUserPlus} label="Student Management" activeTab={activeTab} setActiveTab={setActiveTab} isSidebarOpen={isSidebarOpen} />
           <SidebarItem icon={FiUserCheck} label="Adviser Management" activeTab={activeTab} setActiveTab={setActiveTab} isSidebarOpen={isSidebarOpen} />
           <SidebarItem icon={FiBook} label="Subjects" activeTab={activeTab} setActiveTab={setActiveTab} isSidebarOpen={isSidebarOpen} />
+          <SidebarItem icon={FiColumns} label="Sections" activeTab={activeTab} setActiveTab={setActiveTab} isSidebarOpen={isSidebarOpen} />
           <SidebarItem icon={FiHelpCircle} label="Help" activeTab={activeTab} setActiveTab={setActiveTab} isSidebarOpen={isSidebarOpen} />
           <li className="flex items-center gap-4 p-2.5 rounded-lg hover:bg-gray-300 transition cursor-pointer mt-6" onClick={handleLogout}>
             <FiLogOut size={28} />
@@ -163,6 +164,7 @@ export default function AdminDashboard() {
             />
           )}
           {activeTab === "Subjects" && <Subjects />}
+          {activeTab === "Sections" && <Sections />}
           {activeTab === "Help" && <Help />}
         </div>
       </main>
@@ -199,6 +201,9 @@ function Students({ students, loading, error, fetchStudents }) {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState("");
+  const [selectedStrand, setSelectedStrand] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleStudentAdded = async () => {
     setIsModalOpen(false);
@@ -225,26 +230,42 @@ function Students({ students, loading, error, fetchStudents }) {
     setEditModalOpen(false);
   };
 
+  const formatFullName = (fullname) => {
+    if (!fullname) return "";
+
+    const parts = fullname.split(" "); // Split full name into parts
+    if (parts.length < 2) return fullname; // If there's no last name, return as is
+
+    const lastName = parts.pop(); // Take the last word as last name
+    const firstName = parts.shift(); // Take the first word as first name
+    const middleName = parts.join(" "); // The remaining words are the middle name(s)
+
+    // Get middle initial (if middle name exists)
+    const middleInitial = middleName ? `${middleName.charAt(0)}.` : "";
+
+    return `${lastName}, ${firstName} ${middleInitial}`;
+  };
+
   const handleDeleteStudent = async (id) => {
     const confirmDelete = window.confirm("Are you sure you want to delete this student?");
     if (!confirmDelete) return;
 
     try {
-        const response = await fetch(`/api/students?id=${id}`, {
-            method: "DELETE",
-        });
+      const response = await fetch(`/api/students?id=${id}`, {
+        method: "DELETE",
+      });
 
-        if (!response.ok) {
-            throw new Error("Failed to delete student");
-        }
+      if (!response.ok) {
+        throw new Error("Failed to delete student");
+      }
 
-        await fetchStudents(); // Refresh the list
-        alert("Student deleted successfully!");
+      await fetchStudents(); // Refresh the list
+      alert("Student deleted successfully!");
     } catch (error) {
-        console.error(error);
-        alert("Error deleting student.");
+      console.error(error);
+      alert("Error deleting student.");
     }
-};
+  };
 
   return (
     <div className="mt-6 bg-white p-6 rounded-lg shadow-md text-black">
@@ -257,21 +278,41 @@ function Students({ students, loading, error, fetchStudents }) {
         </button>
 
         <div className="flex items-center gap-3">
-          <select className="border px-3 py-2 rounded-lg">
-            <option>Grade 11</option>
-            <option>Grade 12</option>
+          {/* Grade Filter */}
+          <select
+            className="border px-3 py-2 rounded-lg"
+            value={selectedGrade}
+            onChange={(e) => setSelectedGrade(e.target.value)}
+          >
+            <option value="">All Grade level</option>
+            <option value="11">Grade 11</option>
+            <option value="12">Grade 12</option>
           </select>
-          <select className="border px-3 py-2 rounded-lg">
-            <option>STEM</option>
-            <option>HUMSS</option>
-            <option>ABM</option>
+          {/* Strand Filter */}
+          <select
+            className="border px-3 py-2 rounded-lg"
+            value={selectedStrand}
+            onChange={(e) => setSelectedStrand(e.target.value)}
+          >
+            <option value="">All Strands</option>
+            <option value="STEM">STEM</option>
+            <option value="HUMSS">HUMSS</option>
+            <option value="ABM">ABM</option>
           </select>
+          {/* Search Input */}
           <div className="relative">
-            <input type="text" placeholder="Search" className="border px-3 py-2 rounded-lg pl-10" />
+            <input
+              type="text"
+              placeholder="Search"
+              className="border px-3 py-2 rounded-lg pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
             <FiSearch className="absolute left-3 top-3 text-gray-400" />
           </div>
         </div>
       </div>
+
 
       {/* Show Add Student Modal */}
       {isModalOpen && (
@@ -328,7 +369,6 @@ function Students({ students, loading, error, fetchStudents }) {
             <tr className="bg-blue-600 text-white">
               <th className="p-3">#</th>
               <th className="p-3">Full Name</th>
-              <th className="p-3">Username</th>
               <th className="p-3">Email</th>
               <th className="p-3">Grade</th>
               <th className="p-3">Strand</th>
@@ -337,41 +377,47 @@ function Students({ students, loading, error, fetchStudents }) {
             </tr>
           </thead>
           <tbody>
-            {students.length > 0 ? (
-              students.map((student, index) => (
-                <tr key={student.id} className="border text-center">
-                  <td className="p-3">{index + 1}</td>
-                  <td className="p-3">{student.fullname}</td>
-                  <td className="p-3">{student.username}</td>
-                  <td className="p-3">{student.email}</td>
-                  <td className="p-3">{student.grade}</td>
-                  <td className="p-3">{student.strand}</td>
-                  <td className="p-3">{student.sex}</td>
-                  <td className="p-3 flex justify-center space-x-3">
-                    <button className="text-blue-600 hover:text-blue-800" onClick={() => openViewModal(student)}>
-                      <FiEye size={18} />
-                    </button>
-                    <button className="text-green-600 hover:text-green-800" onClick={() => openEditModal(student)}>
-                      <FiEdit size={18} />
-                    </button>
-                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteStudent(student.id)}>
-                      <FiTrash size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" className="p-3 text-center text-gray-500">No students found</td>
-              </tr>
-            )}
-          </tbody>
+  {students
+    .filter((student) => 
+      (selectedGrade === "" || student.grade === selectedGrade) && 
+      (selectedStrand === "" || student.strand === selectedStrand) &&
+      (searchQuery === "" || 
+       student.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       student.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) => {
+      const lastNameA = a.fullname.split(" ").pop().toLowerCase();
+      const lastNameB = b.fullname.split(" ").pop().toLowerCase();
+      return lastNameA.localeCompare(lastNameB);
+    })
+    .map((student, index) => (
+      <tr key={student.id} className="border text-center">
+        <td className="p-3">{index + 1}</td>
+        <td className="p-3">{formatFullName(student.fullname)}</td>
+        <td className="p-3">{student.email}</td>
+        <td className="p-3">{student.grade}</td>
+        <td className="p-3">{student.strand}</td>
+        <td className="p-3">{student.sex}</td>
+        <td className="p-3 flex justify-center space-x-3">
+          <button className="text-blue-600 hover:text-blue-800" onClick={() => openViewModal(student)}>
+            <FiEye size={18} />
+          </button>
+          <button className="text-green-600 hover:text-green-800" onClick={() => openEditModal(student)}>
+            <FiEdit size={18} />
+          </button>
+          <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteStudent(student.id)}>
+            <FiTrash size={18} />
+          </button>
+        </td>
+      </tr>
+    ))}
+</tbody>
+
         </table>
       )}
     </div>
   );
 }
-
 
 /* Adviser Component */
 function AdviserManagement({ advisers, loading, error, fetchAdvisers }) {
@@ -481,6 +527,14 @@ function Help() {
         <li>Click "Edit" to modify student details.</li>
         <li>Click "Delete" to remove a student account.</li>
       </ul>
+    </div>
+  );
+}
+
+function Sections() {
+  return (
+    <div className="mt-6 bg-white p-6 rounded-lg shadow-md">
+
     </div>
   );
 }

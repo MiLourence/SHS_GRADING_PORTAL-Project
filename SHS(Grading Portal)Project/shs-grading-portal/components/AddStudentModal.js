@@ -1,5 +1,4 @@
 import { useState } from "react";
-import bcrypt from "bcryptjs";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function AddStudentModal({ onClose, onStudentAdded }) {
@@ -19,7 +18,8 @@ function AddStudentModal({ onClose, onStudentAdded }) {
         address: ""
     });
 
-    const [error, setError] = useState("");
+    const [error, setError] = useState(""); // Add this state
+    const [errors, setErrors] = useState({ email: "", username: "" });
     const [showPassword, setShowPassword] = useState(false);
 
     const togglePasswordVisibility = () => {
@@ -32,31 +32,40 @@ function AddStudentModal({ onClose, onStudentAdded }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        setErrors({ email: "", username: "" });
+        setError(""); // Clear previous error messages
+    
         if (Object.values(student).some((field) => field.trim() === "")) {
             setError("All fields are required.");
             return;
         }
-
+    
         const fullName = `${student.firstName} ${student.middleName} ${student.lastName}`.trim();
-
+    
         try {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(student.password, salt);
-
             const response = await fetch("/api/add_student", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...student, fullname: fullName, password: hashedPassword }),
+                body: JSON.stringify({ ...student, fullname: fullName }),
             });
-
-            if (!response.ok) throw new Error("Failed to add student.");
-
-            const newStudent = await response.json();
-            onStudentAdded(newStudent);
+    
+            const result = await response.json();
+    
+            if (!response.ok) {
+                if (result.field === "email") {
+                    setErrors((prev) => ({ ...prev, email: result.message }));
+                } else if (result.field === "username") {
+                    setErrors((prev) => ({ ...prev, username: result.message }));
+                } else {
+                    setError(result.message); // Set general error message
+                }
+                return;
+            }
+    
+            onStudentAdded(result);
             onClose();
-        } catch (error) {
-            setError(error.message);
+        } catch (err) {
+            setError(err.message);
         }
     };
 
@@ -79,10 +88,19 @@ function AddStudentModal({ onClose, onStudentAdded }) {
                     </div>
 
                     {/* Username */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Username</label>
-                        <input type="text" name="username" value={student.username} onChange={handleChange} placeholder="Username" className="w-full p-2 text-sm border rounded" required />
-                    </div>
+<div>
+    <label className="block text-sm font-medium text-gray-700">Username</label>
+    <input
+        type="text"
+        name="username"
+        value={student.username}
+        onChange={handleChange}
+        placeholder="Username"
+        className={`w-full p-2 text-sm border rounded ${errors.username ? "border-red-500" : ""}`}
+        required
+    />
+    {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+</div>
 
                     {/* Password */}
                     <div>
@@ -107,7 +125,16 @@ function AddStudentModal({ onClose, onStudentAdded }) {
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Contact Details</label>
                         <div className="grid grid-cols-2 gap-3">
-                            <input type="email" name="email" value={student.email} onChange={handleChange} placeholder="Email" className="w-full p-2 text-sm border rounded" required />
+                        <input
+        type="email"
+        name="email"
+        value={student.email}
+        onChange={handleChange}
+        placeholder="Email"
+        className={`w-full p-2 text-sm border rounded ${errors.email ? "border-red-500" : ""}`}
+        required
+    />
+    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                             <input type="tel" name="phone_number" value={student.phone_number} onChange={handleChange} placeholder="Phone Number" className="w-full p-2 text-sm border rounded" required />
                         </div>
                     </div>

@@ -1,3 +1,4 @@
+26/03/2025
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     fullname VARCHAR(150) NOT NULL,
@@ -27,5 +28,42 @@ CREATE TABLE advisers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE users ADD COLUMN date_of_birth DATE NOT NULL;
-ALTER TABLE users ADD COLUMN address TEXT NOT NULL;
+27/03/2025
+-- Users Table
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fullname VARCHAR(150) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    sex ENUM('Male', 'Female') NOT NULL,
+    grade VARCHAR(10) NOT NULL,
+    strand VARCHAR(100) NOT NULL,
+    section_id INT, -- Changed from section VARCHAR to a foreign key reference
+    usertype ENUM('admin', 'adviser', 'user') NOT NULL DEFAULT 'user',
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    date_of_birth DATE NULL,
+    address TEXT NOT NULL,
+    phone_number VARCHAR(15) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE SET NULL
+);
+
+-- Advisers Table
+CREATE TABLE advisers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fullname VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    strand VARCHAR(100) NOT NULL,
+    section_id INT, -- Changed to reference the sections table
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE SET NULL
+);
+
+-- Sections Table (New Table)
+CREATE TABLE sections (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
