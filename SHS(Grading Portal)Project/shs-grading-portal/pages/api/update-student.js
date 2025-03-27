@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { id, fullname, username, password, email, grade, strand, section, sex, phone_number, date_of_birth, address } = req.body;
+    const { id, fullname, username, password, email, grade, strand, section_id, sex, phone_number, date_of_birth, address } = req.body;
 
     // Fetch current student details
     const [rows] = await pool.query("SELECT id, password FROM users WHERE id = ?", [id]);
@@ -15,9 +15,9 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    let hashedPassword = rows[0].password; // Keep the existing password
+    let hashedPassword = rows[0].password;
     if (password) {
-      hashedPassword = await bcrypt.hash(password, 10); // Hash new password
+      hashedPassword = await bcrypt.hash(password, 10);
     }
 
     // Check for duplicate username/email (excluding current student)
@@ -30,12 +30,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Username or Email is already taken" });
     }
 
+    // ✅ Validate if `section_id` exists before updating
+    let newSectionId = section_id ? section_id : null; // Convert empty string to null
+    if (newSectionId) {
+      const [sectionCheck] = await pool.query("SELECT id FROM sections WHERE id = ?", [newSectionId]);
+      if (sectionCheck.length === 0) {
+        return res.status(400).json({ message: "Invalid section selected" });
+      }
+    }
+
     // ✅ Update student details
     const [updateResult] = await pool.query(
       `UPDATE users 
-       SET fullname = ?, username = ?, password = ?, email = ?, grade = ?, strand = ?, section = ?, sex = ?, phone_number = ?, date_of_birth = ?, address = ? 
+       SET fullname = ?, username = ?, password = ?, email = ?, grade = ?, strand = ?, 
+           section_id = ?, sex = ?, phone_number = ?, date_of_birth = ?, address = ? 
        WHERE id = ?`,
-      [fullname, username, hashedPassword, email, grade, strand, section, sex, phone_number, date_of_birth, address, id]
+      [fullname, username, hashedPassword, email, grade, strand, newSectionId, sex, phone_number, date_of_birth, address, id]
     );
 
     if (updateResult.affectedRows === 0) {

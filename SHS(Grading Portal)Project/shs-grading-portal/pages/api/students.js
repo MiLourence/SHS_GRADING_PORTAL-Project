@@ -3,9 +3,14 @@ import db from '@/lib/db';
 export default async function handler(req, res) {
     if (req.method === 'GET') {
         try {
-            const [students] = await db.execute(
-                "SELECT id, fullname, username, email, phone_number, grade, strand, section, sex, date_of_birth, address FROM users WHERE usertype = 'user'"
-            );
+            const [students] = await db.execute(`
+                SELECT users.id, users.fullname, users.username, users.email, users.phone_number, 
+                       users.grade, users.strand, users.sex, users.date_of_birth, users.address, 
+                       COALESCE(sections.name, 'No Section') AS section
+                FROM users 
+                LEFT JOIN sections ON users.section_id = sections.id 
+                WHERE users.usertype = 'user'
+            `);
             return res.status(200).json(students);
         } catch (error) {
             console.error('Database error:', error);
@@ -20,7 +25,6 @@ export default async function handler(req, res) {
                 return res.status(400).json({ message: "Student ID is required" });
             }
 
-            // Delete the student from the database
             await db.execute("DELETE FROM users WHERE id = ?", [id]);
 
             return res.status(200).json({ message: "Student deleted successfully" });

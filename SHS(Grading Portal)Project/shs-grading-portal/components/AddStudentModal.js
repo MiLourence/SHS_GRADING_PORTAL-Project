@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function AddStudentModal({ onClose, onStudentAdded }) {
@@ -12,11 +12,20 @@ function AddStudentModal({ onClose, onStudentAdded }) {
         phone_number: "",
         grade: "11",
         strand: "ABM",
-        section: "Rizal",
+        section_id: "",
         sex: "Male",
         date_of_birth: "",
         address: ""
     });
+
+    const [sections, setSections] = useState([]);
+
+    useEffect(() => {
+        fetch("/api/sections")
+            .then((res) => res.json())
+            .then((data) => setSections(data))
+            .catch((err) => console.error("Error fetching sections:", err));
+    }, []);
 
     const [error, setError] = useState(""); // Add this state
     const [errors, setErrors] = useState({ email: "", username: "" });
@@ -27,45 +36,54 @@ function AddStudentModal({ onClose, onStudentAdded }) {
     };
 
     const handleChange = (e) => {
-        setStudent({ ...student, [e.target.name]: e.target.value });
-    };
+    setStudent({ ...student, [e.target.name]: e.target.value });
+};
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrors({ email: "", username: "" });
         setError(""); // Clear previous error messages
     
-        if (Object.values(student).some((field) => field.trim() === "")) {
+        // Trim all string values
+        const trimmedStudent = Object.fromEntries(
+            Object.entries(student).map(([key, value]) => [
+                key,
+                typeof value === "string" ? value.trim() : value
+            ])
+        );
+
+        // Ensure all fields are filled
+        if (Object.values(trimmedStudent).some((field) => field === "")) {
             setError("All fields are required.");
             return;
         }
-    
-        const fullName = `${student.firstName} ${student.middleName} ${student.lastName}`.trim();
-    
+
+        const fullName = `${trimmedStudent.firstName} ${trimmedStudent.middleName} ${trimmedStudent.lastName}`.trim();
+
         try {
             const response = await fetch("/api/add_student", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...student, fullname: fullName }),
+                body: JSON.stringify({ ...trimmedStudent, fullname: fullName, section: trimmedStudent.section_id }),
             });
-    
+
             const result = await response.json();
-    
+
             if (!response.ok) {
                 if (result.field === "email") {
                     setErrors((prev) => ({ ...prev, email: result.message }));
                 } else if (result.field === "username") {
                     setErrors((prev) => ({ ...prev, username: result.message }));
                 } else {
-                    setError(result.message); // Set general error message
+                    setError(result.message);
                 }
                 return;
             }
-    
+
             onStudentAdded(result);
             onClose();
         } catch (err) {
-            setError(err.message);
+            setError("An error occurred. Please try again.");
         }
     };
 
@@ -160,10 +178,14 @@ function AddStudentModal({ onClose, onStudentAdded }) {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Section</label>
-                            <select name="section" value={student.section} onChange={handleChange} className="w-full p-2 text-sm border rounded">
-                                <option value="Rizal">Rizal</option>
-                                <option value="Mabini">Mabini</option>
-                            </select>
+                            <select name="section_id" value={student.section_id} onChange={handleChange} className="w-full p-2 text-sm border rounded">
+    <option value="">Select Section</option>
+    {sections.map((section) => (
+        <option key={section.id} value={section.id}>
+            {section.name}
+        </option>
+    ))}
+</select>
                         </div>
                     </div>
 

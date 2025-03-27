@@ -6,9 +6,12 @@ export default async function handler(req, res) {
     }
 
     try {
-        const [advisers] = await db.execute(
-            "SELECT id, fullname, email, strand, section FROM advisers"
-        );
+        const [advisers] = await db.execute(`
+            SELECT advisers.id, advisers.fullname, advisers.email, advisers.strand, 
+                   COALESCE(sections.name, 'No Section') AS section
+            FROM advisers
+            LEFT JOIN sections ON advisers.section_id = sections.id
+        `);
         res.status(200).json(advisers);
     } catch (error) {
         console.error('Database error:', error);

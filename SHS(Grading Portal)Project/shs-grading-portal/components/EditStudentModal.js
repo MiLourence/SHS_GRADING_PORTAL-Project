@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 function EditStudentModal({ student, onClose, fetchStudents }) {
+  const [sections, setSections] = useState([]);
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -10,17 +11,44 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
       day: "numeric",
     });
   };
+;
+
+
+useEffect(() => {
+  const fetchSections = async () => {
+    try {
+      const res = await fetch("/api/sections");
+      const data = await res.json();
+      console.log("Fetched sections:", data);
+      setSections(Array.isArray(data) ? data : []);
+
+      // Ensure section is set only if it exists in the fetched data
+      if (student.section_id) {
+        const validSection = data.some(sec => String(sec.id) === String(student.section_id));
+        setEditedStudent(prev => ({
+          ...prev,
+          section_id: validSection ? String(student.section_id) : "", // Set if valid, otherwise empty
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch sections:", error);
+      setSections([]);
+    }
+  };
+
+  fetchSections();
+}, [student.section_id]);
 
   const toInputDateFormat = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    
+
     // Adjust for local timezone to prevent day shift
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  
+
     return localDate.toISOString().split("T")[0];
   };
-  
+
   const splitFullname = (fullname) => {
     const parts = fullname.trim().split(/\s+/); // Split by spaces while removing extra spaces
     if (parts.length === 2) {
@@ -39,7 +67,7 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
       return { first_name: parts[0] || "", middle_name: "", last_name: "" };
     }
   };
-  
+
   const { first_name, middle_name, last_name } = splitFullname(student.fullname);
 
   const [editedStudent, setEditedStudent] = useState({
@@ -52,7 +80,7 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
     phone_number: student.phone_number || "",
     grade: student.grade,
     strand: student.strand,
-    section: student.section,
+    section_id: student.section_id ? String(student.section_id) : "", // Ensure it's a string
     sex: student.sex,
     date_of_birth: toInputDateFormat(student.date_of_birth),
     address: student.address || "",
@@ -68,26 +96,33 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
   const handleSubmit = async () => {
     const fullname = `${editedStudent.first_name} ${editedStudent.middle_name} ${editedStudent.last_name}`.trim();
 
-        // 🔹 Check if username or email is already taken before sending the update request
-        const checkResponse = await fetch("/api/check-username-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: editedStudent.username, email: editedStudent.email, studentId: student.id }),
-        });
+    // 🔹 Check if username or email is already taken before sending the update request
+    const checkResponse = await fetch("/api/check-username-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: editedStudent.username, email: editedStudent.email, studentId: student.id }),
+    });
 
-        const checkData = await checkResponse.json();
-        if (!checkResponse.ok) {
-          setErrors({ username: checkData.username || "", email: checkData.email || "" });
-          return; // Stop submission if errors exist
-        }
+    const checkData = await checkResponse.json();
+    if (!checkResponse.ok) {
+      setErrors({ username: checkData.username || "", email: checkData.email || "" });
+      return; // Stop submission if errors exist
+    }
 
-     // 🔹 Proceed with update if no errors
-     const response = await fetch("/api/update-student", {
+    // Ensure the section is only updated if the user changed it
+    const formattedData = {
+      ...editedStudent,
+      section_id: editedStudent.section_id !== "" ? editedStudent.section_id : student.section_id,
+      fullname,
+      id: student.id,
+    };
+
+    const response = await fetch("/api/update-student", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...editedStudent, fullname, id: student.id }), // Include ID
+      body: JSON.stringify(formattedData),
     });
-  
+
     if (response.ok) {
       await fetchStudents();
       onClose();
@@ -100,7 +135,7 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-[700px]">
         <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Edit Student</h2>
-  
+
         {/* Full Name Row */}
         <div className="grid grid-cols-3 gap-4">
           <div>
@@ -116,7 +151,7 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
             <input name="last_name" value={editedStudent.last_name} onChange={handleChange} className="border p-2 w-full rounded-md" placeholder="Last name" />
           </div>
         </div>
-  
+
         {/* Username & Password */}
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
@@ -134,33 +169,33 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
             <input name="password" type="password" onChange={handleChange} className="border p-2 w-full rounded-md" />
           </div>
         </div>
-  
-      {/* Email, Phone Number, and Sex Row */}
-      <div className="grid grid-cols-3 gap-4 mt-4">
-        <div>
-          <label className="text-gray-700 font-semibold">Email</label>
-          <input
-            name="email"
-            value={editedStudent.email}
-            onChange={handleChange}
-            className={`border p-2 w-full rounded-md ${errors.email ? "border-red-500" : ""}`}
-            placeholder={errors.email || "Enter email"}
-          />
-          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+
+        {/* Email, Phone Number, and Sex Row */}
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="text-gray-700 font-semibold">Email</label>
+            <input
+              name="email"
+              value={editedStudent.email}
+              onChange={handleChange}
+              className={`border p-2 w-full rounded-md ${errors.email ? "border-red-500" : ""}`}
+              placeholder={errors.email || "Enter email"}
+            />
+            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+          </div>
+          <div>
+            <label className="text-gray-700 font-semibold">Phone Number</label>
+            <input name="phone_number" value={editedStudent.phone_number} onChange={handleChange} className="border p-2 w-full rounded-md" placeholder="Enter phone number" />
+          </div>
+          <div>
+            <label className="text-gray-700 font-semibold">Sex</label>
+            <select name="sex" value={editedStudent.sex} onChange={handleChange} className="border p-2 w-full rounded-md">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="text-gray-700 font-semibold">Phone Number</label>
-          <input name="phone_number" value={editedStudent.phone_number} onChange={handleChange} className="border p-2 w-full rounded-md" placeholder="Enter phone number" />
-        </div>
-        <div>
-          <label className="text-gray-700 font-semibold">Sex</label>
-          <select name="sex" value={editedStudent.sex} onChange={handleChange} className="border p-2 w-full rounded-md">
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </div>
-      </div>
-  
+
         {/* Grade, Strand, and Section Row */}
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div>
@@ -180,23 +215,27 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
           </div>
           <div>
             <label className="text-gray-700 font-semibold">Section</label>
-            <select name="section" value={editedStudent.section} onChange={handleChange} className="border p-2 w-full rounded-md">
-              <option value="Rizal">Rizal</option>
-              <option value="Mabini">Mabini</option>
+            <select name="section_id" value={editedStudent.section_id} onChange={handleChange} className="border p-2 w-full rounded-md">
+              <option value="">No Section</option>
+              {sections.map((section) => (
+                <option key={section.id} value={String(section.id)}>
+                  {section.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
-  
+
         {/* Date of Birth Row */}
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div>
             <label className="text-gray-700 font-semibold">Date of Birth</label>
-            <input 
-              name="date_of_birth" 
-              type="date" 
-              value={editedStudent.date_of_birth} 
-              onChange={handleChange} 
-              className="border p-2 w-full rounded-md" 
+            <input
+              name="date_of_birth"
+              type="date"
+              value={editedStudent.date_of_birth}
+              onChange={handleChange}
+              className="border p-2 w-full rounded-md"
             />
           </div>
           <div className="flex items-end">
@@ -207,13 +246,13 @@ function EditStudentModal({ student, onClose, fetchStudents }) {
             )}
           </div>
         </div>
-  
+
         {/* Address Row */}
         <div className="mt-4">
           <label className="text-gray-700 font-semibold">Address</label>
           <input name="address" value={editedStudent.address} onChange={handleChange} className="border p-2 w-full rounded-md" placeholder="Enter address" />
         </div>
-  
+
         {/* Buttons */}
         <div className="flex justify-between mt-6">
           <button onClick={handleSubmit} className="bg-blue-600 text-white px-4 py-2 rounded-md w-1/2 mr-2 hover:bg-blue-700">
