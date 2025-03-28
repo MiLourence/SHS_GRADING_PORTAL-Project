@@ -7,21 +7,33 @@ export default async function handler(req, res) {
     }
 
     const { fullname, email, password, strand, section } = req.body;
+    const section_id = section; // `section` is actually `section_id`
 
     // Validate required fields
-    if (!fullname || !email || !password || !strand || !section) {
+    if (!fullname || !email || !password || !strand || !section_id) {
         return res.status(400).json({ message: "All fields are required." });
     }
 
     try {
-        // Check if adviser already exists
-        const [rows] = await db.query("SELECT * FROM advisers WHERE email = ? LIMIT 1", [email]);
+        // Check if email or fullname exists in `advisers` or `users` tables
+        const [[adviserCheck]] = await db.query(
+            "SELECT email, fullname FROM advisers WHERE email = ? OR fullname = ? LIMIT 1", 
+            [email, fullname]
+        );
+        const [[userCheck]] = await db.query(
+            "SELECT email, fullname FROM users WHERE email = ? OR fullname = ? LIMIT 1", 
+            [email, fullname]
+        );
 
-        console.log("Existing Adviser:", rows); // Debugging
-
-        // Ensure rows is an array and check if it contains any results
-        if (rows.length > 0) {
-            return res.status(409).json({ message: "Email already exists." });
+        let errorMessages = [];
+        if (adviserCheck || userCheck) {
+            if ((adviserCheck && adviserCheck.fullname === fullname) || (userCheck && userCheck.fullname === fullname)) {
+                errorMessages.push("Full name already exists.");
+            }
+            if ((adviserCheck && adviserCheck.email === email) || (userCheck && userCheck.email === email)) {
+                errorMessages.push("Email already exists.");
+            }
+            return res.status(409).json({ message: errorMessages.join(" ") });
         }
 
         // Hash the password
@@ -30,8 +42,8 @@ export default async function handler(req, res) {
 
         // Insert adviser into the database
         const result = await db.query(
-            "INSERT INTO advisers (fullname, email, password, strand, section) VALUES (?, ?, ?, ?, ?)",
-            [fullname, email, hashedPassword, strand, section]
+            "INSERT INTO advisers (fullname, email, password, strand, section_id) VALUES (?, ?, ?, ?, ?)",
+            [fullname, email, hashedPassword, strand, section_id]
         );
 
         return res.status(201).json({ message: "Adviser added successfully!", adviserId: result.insertId });

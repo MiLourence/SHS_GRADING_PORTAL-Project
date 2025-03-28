@@ -18,6 +18,9 @@ export default function AdminDashboard() {
   const [advisers, setAdvisers] = useState([]);
   const [advisersLoading, setAdvisersLoading] = useState(true);
   const [advisersError, setAdvisersError] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [sectionsError, setSectionsError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -31,6 +34,7 @@ export default function AdminDashboard() {
       setFullname(storedFullname || "Admin");
       fetchStudents();
       fetchAdvisers();
+      fetchSections();
     }
   }, []);
 
@@ -59,6 +63,20 @@ export default function AdminDashboard() {
       setAdvisersError(error.message);
     } finally {
       setAdvisersLoading(false);
+    }
+  };
+
+  const fetchSections = async () => {
+    try {
+      const res = await fetch('/api/sections');
+      if (!res.ok) throw new Error('Failed to fetch sections');
+      const data = await res.json();
+      setSections(data || []);
+    } catch (error) {
+      console.error(error);
+      setSectionsError(error.message);
+    } finally {
+      setSectionsLoading(false);
     }
   };
 
@@ -164,7 +182,14 @@ export default function AdminDashboard() {
             />
           )}
           {activeTab === "Subjects" && <Subjects />}
-          {activeTab === "Sections" && <Sections />}
+          {activeTab === "Sections" && (
+            <Sections
+              sections={sections}
+              loading={sectionsLoading}
+              error={sectionsError}
+              fetchSections={fetchSections}  // ✅ Pass fetchSections here
+            />
+          )}
           {activeTab === "Help" && <Help />}
         </div>
       </main>
@@ -372,46 +397,46 @@ function Students({ students, loading, error, fetchStudents }) {
               <th className="p-3">Email</th>
               <th className="p-3">Grade</th>
               <th className="p-3">Strand</th>
-              <th className="p-3">Sex</th>
+              <th className="p-3">Section</th>
               <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-  {students
-    .filter((student) => 
-      (selectedGrade === "" || student.grade === selectedGrade) && 
-      (selectedStrand === "" || student.strand === selectedStrand) &&
-      (searchQuery === "" || 
-       student.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       student.email.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
-    .sort((a, b) => {
-      const lastNameA = a.fullname.split(" ").pop().toLowerCase();
-      const lastNameB = b.fullname.split(" ").pop().toLowerCase();
-      return lastNameA.localeCompare(lastNameB);
-    })
-    .map((student, index) => (
-      <tr key={student.id} className="border text-center">
-        <td className="p-3">{index + 1}</td>
-        <td className="p-3">{formatFullName(student.fullname)}</td>
-        <td className="p-3">{student.email}</td>
-        <td className="p-3">{student.grade}</td>
-        <td className="p-3">{student.strand}</td>
-        <td className="p-3">{student.sex}</td>
-        <td className="p-3 flex justify-center space-x-3">
-          <button className="text-blue-600 hover:text-blue-800" onClick={() => openViewModal(student)}>
-            <FiEye size={18} />
-          </button>
-          <button className="text-green-600 hover:text-green-800" onClick={() => openEditModal(student)}>
-            <FiEdit size={18} />
-          </button>
-          <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteStudent(student.id)}>
-            <FiTrash size={18} />
-          </button>
-        </td>
-      </tr>
-    ))}
-</tbody>
+            {students
+              .filter((student) =>
+                (selectedGrade === "" || student.grade === selectedGrade) &&
+                (selectedStrand === "" || student.strand === selectedStrand) &&
+                (searchQuery === "" ||
+                  student.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  student.email.toLowerCase().includes(searchQuery.toLowerCase()))
+              )
+              .sort((a, b) => {
+                const lastNameA = a.fullname.split(" ").pop().toLowerCase();
+                const lastNameB = b.fullname.split(" ").pop().toLowerCase();
+                return lastNameA.localeCompare(lastNameB);
+              })
+              .map((student, index) => (
+                <tr key={student.id} className="border text-center">
+                  <td className="p-3">{index + 1}</td>
+                  <td className="p-3">{formatFullName(student.fullname)}</td>
+                  <td className="p-3">{student.email}</td>
+                  <td className="p-3">{student.grade}</td>
+                  <td className="p-3">{student.strand}</td>
+                  <td className="p-3">{student.section}</td>
+                  <td className="p-3 flex justify-center space-x-3">
+                    <button className="text-blue-600 hover:text-blue-800" onClick={() => openViewModal(student)}>
+                      <FiEye size={18} />
+                    </button>
+                    <button className="text-green-600 hover:text-green-800" onClick={() => openEditModal(student)}>
+                      <FiEdit size={18} />
+                    </button>
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteStudent(student.id)}>
+                      <FiTrash size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
 
         </table>
       )}
@@ -422,10 +447,41 @@ function Students({ students, loading, error, fetchStudents }) {
 /* Adviser Component */
 function AdviserManagement({ advisers, loading, error, fetchAdvisers }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAdviser, setSelectedAdviser] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
 
   const handleAdviserAdded = async () => {
     setIsModalOpen(false);
     await fetchAdvisers();
+  };
+
+  const openViewModal = (adviser) => {
+    setSelectedAdviser(adviser);
+    setViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setSelectedAdviser(null);
+    setViewModalOpen(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this adviser?")) return;
+
+    try {
+      const response = await fetch(`/api/delete_adviser?id=${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete adviser.");
+      }
+
+      await fetchAdvisers();
+    } catch (error) {
+      console.error("Error deleting adviser:", error.message);
+    }
   };
 
   return (
@@ -451,6 +507,27 @@ function AdviserManagement({ advisers, loading, error, fetchAdvisers }) {
       {/* Add Adviser Modal */}
       {isModalOpen && (
         <AddAdviserModal onClose={() => setIsModalOpen(false)} onAdviserAdded={handleAdviserAdded} />
+      )}
+
+      {/* View Adviser Modal */}
+      {viewModalOpen && selectedAdviser && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h2 className="text-lg font-semibold mb-4">Adviser Details</h2>
+            <div className="text-sm space-y-2">
+              <p><strong>Full Name:</strong> {selectedAdviser.fullname}</p>
+              <p><strong>Email:</strong> {selectedAdviser.email}</p>
+              <p><strong>Phone Number:</strong> {selectedAdviser.phone_number || "N/A"}</p>
+              <p><strong>Strand:</strong> {selectedAdviser.strand || "N/A"}</p>
+              <p><strong>Section:</strong> {selectedAdviser.section || "N/A"}</p>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={closeViewModal} className="px-4 py-2 bg-gray-500 text-white rounded-lg">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Loading or Error Handling */}
@@ -480,13 +557,13 @@ function AdviserManagement({ advisers, loading, error, fetchAdvisers }) {
                   <td className="p-3">{adviser.strand || "N/A"}</td>
                   <td className="p-3">{adviser.section || "N/A"}</td>
                   <td className="p-3 flex justify-center space-x-3">
-                    <button className="text-blue-600 hover:text-blue-800">
+                    <button className="text-blue-600 hover:text-blue-800" onClick={() => openViewModal(adviser)}>
                       <FiEye size={18} />
                     </button>
                     <button className="text-green-600 hover:text-green-800">
                       <FiEdit size={18} />
                     </button>
-                    <button className="text-red-600 hover:text-red-800">
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(adviser.id)}>
                       <FiTrash size={18} />
                     </button>
                   </td>
@@ -514,6 +591,165 @@ function Subjects() {
   );
 }
 
+function Sections({ sections, loading, error, fetchSections }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sectionName, setSectionName] = useState("");
+
+  const openEditModal = (section) => {
+    setSelectedSection(section);
+    setEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setSelectedSection(null);
+    setEditModalOpen(false);
+  };
+
+  const handleDeleteSection = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this section?");
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`/api/sections?id=${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete section");
+      }
+
+      alert("Section deleted successfully!");
+      fetchSections(); // Refresh list
+    } catch (error) {
+      console.error(error);
+      alert("Error deleting section.");
+    }
+  };
+
+  const handleAddSection = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await fetch("/api/sections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: sectionName }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add section");
+      }
+
+      alert("Section added successfully!");
+      setIsModalOpen(false);
+      setSectionName("");
+      await fetchSections(); // Refresh list
+    } catch (error) {
+      console.error(error);
+      alert("Error adding section.");
+    }
+  };
+
+  return (
+    <div className="mt-6 bg-white p-6 rounded-lg shadow-md text-black">
+      {/* Header with Add Button */}
+      <div className="flex justify-between items-center mb-4">
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <FiPlus /> Add Section
+        </button>
+
+        {/* Search Input */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search Section"
+            className="border px-3 py-2 rounded-lg pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <FiSearch className="absolute left-3 top-3 text-gray-400" />
+        </div>
+      </div>
+
+      {/* Add Section Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h2 className="text-lg font-semibold mb-4">Add Section</h2>
+            <form onSubmit={handleAddSection}>
+              <label className="block mb-2 text-sm font-medium">Section Name:</label>
+              <input
+                type="text"
+                className="w-full border px-3 py-2 rounded-lg mb-4"
+                value={sectionName}
+                onChange={(e) => setSectionName(e.target.value)}
+                required
+              />
+              <div className="flex justify-end space-x-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                  Add Section
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Show Edit Section Modal */}
+      {editModalOpen && selectedSection && (
+        <EditSectionModal section={selectedSection} onClose={closeEditModal} fetchSections={fetchSections} />
+      )}
+
+      {/* Show loading or error message */}
+      {loading ? (
+        <p className="text-center text-gray-600">Loading sections...</p>
+      ) : error ? (
+        <p className="text-center text-red-600">{error}</p>
+      ) : (
+        <table className="w-full border-collapse border">
+          <thead>
+            <tr className="bg-blue-600 text-white">
+              <th className="p-3">#</th>
+              <th className="p-3">Section Name</th>
+              <th className="p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sections
+              .filter((section) => section.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map((section, index) => (
+                <tr key={section.id} className="border text-center">
+                  <td className="p-3">{index + 1}</td>
+                  <td className="p-3">{section.name}</td>
+                  <td className="p-3 flex justify-center space-x-3">
+                    <button className="text-green-600 hover:text-green-800" onClick={() => openEditModal(section)}>
+                      <FiEdit size={18} />
+                    </button>
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteSection(section.id)}>
+                      <FiTrash size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 function Help() {
   return (
     <div className="mt-6 bg-white p-6 rounded-lg shadow-md">
@@ -531,10 +767,3 @@ function Help() {
   );
 }
 
-function Sections() {
-  return (
-    <div className="mt-6 bg-white p-6 rounded-lg shadow-md">
-
-    </div>
-  );
-}

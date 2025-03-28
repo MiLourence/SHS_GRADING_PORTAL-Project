@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     // Fetch current student details
     const [rows] = await pool.query("SELECT id, password FROM users WHERE id = ?", [id]);
     if (rows.length === 0) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({ message: "Student not found." });
     }
 
     let hashedPassword = rows[0].password;
@@ -20,22 +20,43 @@ export default async function handler(req, res) {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    // Check for duplicate username/email (excluding current student)
+    // Check for duplicate fullname, email, or username (excluding current student)
     const [existingUsers] = await pool.query(
-      "SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?",
-      [username, email, id]
+      "SELECT fullname, email, username FROM users WHERE (fullname = ? OR email = ? OR username = ?) AND id != ?",
+      [fullname, email, username, id]
     );
 
-    if (existingUsers.length > 0) {
-      return res.status(400).json({ message: "Username or Email is already taken" });
+    const [existingAdvisers] = await pool.query(
+      "SELECT fullname, email FROM advisers WHERE fullname = ? OR email = ?",
+      [fullname, email]
+    );
+
+    let errorMessages = [];
+    if (existingUsers.length > 0 || existingAdvisers.length > 0) {
+      if (
+        (existingUsers.some(user => user.fullname === fullname)) ||
+        (existingAdvisers.some(adviser => adviser.fullname === fullname))
+      ) {
+        errorMessages.push("Full name already exists.");
+      }
+      if (
+        (existingUsers.some(user => user.email === email)) ||
+        (existingAdvisers.some(adviser => adviser.email === email))
+      ) {
+        errorMessages.push("Email already exists.");
+      }
+      if (existingUsers.some(user => user.username === username)) {
+        errorMessages.push("Username already exists.");
+      }
+      return res.status(409).json({ message: errorMessages.join(" ") });
     }
 
-    // ✅ Validate if `section_id` exists before updating
+    // Validate if `section_id` exists before updating
     let newSectionId = section_id ? section_id : null; // Convert empty string to null
     if (newSectionId) {
       const [sectionCheck] = await pool.query("SELECT id FROM sections WHERE id = ?", [newSectionId]);
       if (sectionCheck.length === 0) {
-        return res.status(400).json({ message: "Invalid section selected" });
+        return res.status(400).json({ message: "Invalid section selected." });
       }
     }
 
@@ -49,12 +70,12 @@ export default async function handler(req, res) {
     );
 
     if (updateResult.affectedRows === 0) {
-      return res.status(400).json({ message: "No changes made" });
+      return res.status(400).json({ message: "No changes made." });
     }
 
-    res.status(200).json({ message: "Student updated successfully" });
+    res.status(200).json({ message: "Student updated successfully!" });
   } catch (error) {
     console.error("Update error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: "Internal Server Error." });
   }
 }

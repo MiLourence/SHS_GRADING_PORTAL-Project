@@ -36,14 +36,14 @@ function AddStudentModal({ onClose, onStudentAdded }) {
     };
 
     const handleChange = (e) => {
-    setStudent({ ...student, [e.target.name]: e.target.value });
-};
+        setStudent({ ...student, [e.target.name]: e.target.value });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrors({ email: "", username: "" });
         setError(""); // Clear previous error messages
-    
+
         // Trim all string values
         const trimmedStudent = Object.fromEntries(
             Object.entries(student).map(([key, value]) => [
@@ -106,19 +106,19 @@ function AddStudentModal({ onClose, onStudentAdded }) {
                     </div>
 
                     {/* Username */}
-<div>
-    <label className="block text-sm font-medium text-gray-700">Username</label>
-    <input
-        type="text"
-        name="username"
-        value={student.username}
-        onChange={handleChange}
-        placeholder="Username"
-        className={`w-full p-2 text-sm border rounded ${errors.username ? "border-red-500" : ""}`}
-        required
-    />
-    {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
-</div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Username</label>
+                        <input
+                            type="text"
+                            name="username"
+                            value={student.username}
+                            onChange={handleChange}
+                            placeholder="Username"
+                            className={`w-full p-2 text-sm border rounded ${errors.username ? "border-red-500" : ""}`}
+                            required
+                        />
+                        {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+                    </div>
 
                     {/* Password */}
                     <div>
@@ -143,16 +143,16 @@ function AddStudentModal({ onClose, onStudentAdded }) {
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Contact Details</label>
                         <div className="grid grid-cols-2 gap-3">
-                        <input
-        type="email"
-        name="email"
-        value={student.email}
-        onChange={handleChange}
-        placeholder="Email"
-        className={`w-full p-2 text-sm border rounded ${errors.email ? "border-red-500" : ""}`}
-        required
-    />
-    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                            <input
+                                type="email"
+                                name="email"
+                                value={student.email}
+                                onChange={handleChange}
+                                placeholder="Email"
+                                className={`w-full p-2 text-sm border rounded ${errors.email ? "border-red-500" : ""}`}
+                                required
+                            />
+                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                             <input type="tel" name="phone_number" value={student.phone_number} onChange={handleChange} placeholder="Phone Number" className="w-full p-2 text-sm border rounded" required />
                         </div>
                     </div>
@@ -179,13 +179,13 @@ function AddStudentModal({ onClose, onStudentAdded }) {
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Section</label>
                             <select name="section_id" value={student.section_id} onChange={handleChange} className="w-full p-2 text-sm border rounded">
-    <option value="">Select Section</option>
-    {sections.map((section) => (
-        <option key={section.id} value={section.id}>
-            {section.name}
-        </option>
-    ))}
-</select>
+                                <option value="">Select Section</option>
+                                {sections.map((section) => (
+                                    <option key={section.id} value={section.id}>
+                                        {section.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

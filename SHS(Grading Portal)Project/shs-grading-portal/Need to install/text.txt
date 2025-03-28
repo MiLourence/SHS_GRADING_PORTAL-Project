@@ -43,3 +43,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 }
+
+
+INSERT INTO `users` (`id`, `fullname`, `username`, `password`, `email`, `sex`, `grade`, `strand`, `usertype`, `status`, `created_at`, `address`, `date_of_birth`, `phone_number`, `section_id`) VALUES
+(5, 'admin', 'admin', '$2b$10$nx7I9cRGB1ZmZVB9s2Xt5eRW14TNF7o3NPtTpvPomywO2G4fQola2', 'admin@gmail.com', 'Male', '', '', 'admin', 'active', '2025-03-13 13:41:14', '', NULL, NULL, NULL),

@@ -11,18 +11,32 @@ export default async function handler(req, res) {
 
         // Ensure all fields are provided
         if (![fullname, email, username, password, phone_number, sex, grade, strand, section_id, date_of_birth, address].every(field => field && field.toString().trim() !== "")) {
-            return res.status(400).json({ message: 'All fields are required' });
+            return res.status(400).json({ message: 'All fields are required.' });
         }
 
-        // Check if email or username already exists
-        const [existingUsers] = await db.execute("SELECT email, username FROM users WHERE email = ? OR username = ?", [email, username]);
+        // Check if fullname, email, or username already exists in users or advisers table
+        const [[existingUser]] = await db.query(
+            "SELECT fullname, email, username FROM users WHERE fullname = ? OR email = ? OR username = ? LIMIT 1",
+            [fullname, email, username]
+        );
 
-        if (existingUsers.length > 0) {
-            const conflictFields = [];
-            if (existingUsers.some(user => user.email === email)) conflictFields.push("Email");
-            if (existingUsers.some(user => user.username === username)) conflictFields.push("Username");
+        const [[existingAdviser]] = await db.query(
+            "SELECT fullname, email FROM advisers WHERE fullname = ? OR email = ? LIMIT 1",
+            [fullname, email]
+        );
 
-            return res.status(400).json({ message: `${conflictFields.join(" and ")} already taken.` });
+        let errorMessages = [];
+        if (existingUser || existingAdviser) {
+            if ((existingUser && existingUser.fullname === fullname) || (existingAdviser && existingAdviser.fullname === fullname)) {
+                errorMessages.push("Full name already exists.");
+            }
+            if ((existingUser && existingUser.email === email) || (existingAdviser && existingAdviser.email === email)) {
+                errorMessages.push("Email already exists.");
+            }
+            if (existingUser && existingUser.username === username) {
+                errorMessages.push("Username already exists.");
+            }
+            return res.status(409).json({ message: errorMessages.join(" ") });
         }
 
         // Hash the password before saving
@@ -36,7 +50,7 @@ export default async function handler(req, res) {
 
         await db.execute(query, [fullname, email, username, hashedPassword, phone_number, sex, grade, strand, section_id, date_of_birth, address]);
 
-        return res.status(200).json({ message: 'Student added successfully' });
+        return res.status(201).json({ message: 'Student added successfully!' });
     } catch (error) {
         console.error('Database Error:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
